@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   SafeAreaView,
   StyleSheet,
@@ -8,13 +8,88 @@ import {
   View,
   Switch,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { apiUrl } from "./api";
+import { setStoredUserId } from "./session";
+
+function extractErrorMessage(data: any): string {
+  const detail = data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    if (typeof first === "string") return first;
+    if (first && typeof first.msg === "string") return first.msg;
+  }
+  if (data?.message && typeof data.message === "string") return data.message;
+  return "Login failed.";
+}
 
 export default function Index() {
+  const params = useLocalSearchParams<{
+    accountCreated?: string;
+    identifier?: string;
+  }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+
+  const paramIdentifier = Array.isArray(params.identifier)
+    ? params.identifier[0]
+    : params.identifier;
+  const accountCreatedParam = Array.isArray(params.accountCreated)
+    ? params.accountCreated[0]
+    : params.accountCreated;
+  const accountJustCreated =
+    accountCreatedParam === "1" || accountCreatedParam === "true";
+
+  useEffect(() => {
+    if (paramIdentifier?.trim()) {
+      setEmail(paramIdentifier.trim());
+    }
+  }, [paramIdentifier]);
+  const onLogin = async () => {
+    setStatusMessage("");
+    if (!email.trim() || !password.trim()) {
+      setStatusMessage("Please enter email/username and password.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(apiUrl("/auth/login"), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            identifier: email.trim(),
+            password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        setStatusMessage(extractErrorMessage(data));
+        return;
+      }
+
+      void rememberMe;
+      const uid = data.user?.id;
+      if (uid != null) {
+        await setStoredUserId(String(uid));
+      }
+      router.replace("/DailyDashboard");
+    } catch {
+      setStatusMessage("Could not connect to server.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -22,6 +97,11 @@ export default function Index() {
         <Text style={styles.brand}>RasaRight</Text>
 
         <View style={styles.card}>
+          {accountJustCreated && (
+            <Text style={styles.successBanner}>
+              Account created. Please log in.
+            </Text>
+          )}
           <Text style={styles.title}>Welcome Back!</Text>
           <Text style={styles.subtitle}>Access your health dashboard</Text>
 
@@ -61,10 +141,16 @@ export default function Index() {
           <TouchableOpacity
             style={styles.button}
             activeOpacity={0.9}
-            onPress={() => router.replace("/DailyDashboard")}
+            onPress={onLogin}
+            disabled={isSubmitting}
           >
-            <Text style={styles.buttonText}>Log In</Text>
+            <Text style={styles.buttonText}>
+              {isSubmitting ? "Logging in..." : "Log In"}
+            </Text>
           </TouchableOpacity>
+          {!!statusMessage && (
+            <Text style={styles.statusText}>{statusMessage}</Text>
+          )}
 
           <TouchableOpacity
             activeOpacity={0.7}
@@ -123,6 +209,18 @@ const styles = StyleSheet.create({
     color: "#555555",
     marginBottom: 24,
   },
+  successBanner: {
+    backgroundColor: "#e8f6e0",
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#2d6a1f",
+    textAlign: "center",
+    overflow: "hidden",
+  },
   fieldGroup: {
     marginBottom: 16,
   },
@@ -168,6 +266,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 13,
     color: "#555555",
+  },
+  statusText: {
+    marginTop: 10,
+    textAlign: "center",
+    fontSize: 12,
+    color: "#333333",
   },
   footerText: {
     textAlign: "center",

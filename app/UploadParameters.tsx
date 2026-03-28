@@ -1,19 +1,22 @@
-import { useRef, useState } from "react";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   type GestureResponderEvent,
   LayoutChangeEvent,
   PanResponder,
   Platform,
-  ScrollView,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { apiUrl } from "./api";
+import { getStoredUserId } from "./session";
 
 type SliderProps = {
   labelLeft: string;
@@ -98,12 +101,9 @@ function Slider({ labelLeft, labelRight, value, onValueChange }: SliderProps) {
   );
 }
 
-// Backend endpoint for classification.
-// Set this in `.env` as `EXPO_PUBLIC_API_BASE_URL=http://<YOUR_IP>:8082`
-// (Expo only exposes env vars prefixed with `EXPO_PUBLIC_` to the app).
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || "http://192.168.1.8:8082";
-const CLASSIFY_ENDPOINT = `${API_BASE_URL.replace(/\/+$/, "")}/classify`;
+// Set `EXPO_PUBLIC_API_BASE_URL` in `.env` (see `app/api.ts`).
+const CLASSIFY_ENDPOINT = apiUrl("/classify");
+const ADJUST_ENDPOINT = apiUrl("/adjust");
 
 type Nutrition = {
   calories: number;
@@ -115,8 +115,19 @@ type Nutrition = {
 };
 
 async function classifyOnServer(
-  uri: string
-): Promise<{ label: string; confidence: number; nutrition: Nutrition } | null> {
+  uri: string,
+  sliders: {
+    size: number;
+    sweetness: number;
+    saltiness: number;
+    oiliness: number;
+  }
+): Promise<{
+  label: string;
+  confidence: number;
+  baseNutrition: Nutrition;
+  nutrition: Nutrition;
+} | null> {
   try {
     const filename = uri.split("/").pop() ?? "image.jpg";
     const formData = new FormData();
@@ -137,6 +148,10 @@ async function classifyOnServer(
         type: "image/jpeg",
       } as any);
     }
+    formData.append("size", String(sliders.size));
+    formData.append("sweetness", String(sliders.sweetness));
+    formData.append("saltiness", String(sliders.saltiness));
+    formData.append("oiliness", String(sliders.oiliness));
 
     const response = await fetch(CLASSIFY_ENDPOINT, {
       method: "POST",
@@ -152,6 +167,14 @@ async function classifyOnServer(
 
     const data = await response.json();
     if (typeof data.label === "string" && data.label.length > 0) {
+      const baseNutrition: Nutrition = {
+        calories: Number(data.base_nutrition?.calories ?? 0),
+        carbs_g: Number(data.base_nutrition?.carbs_g ?? 0),
+        protein_g: Number(data.base_nutrition?.protein_g ?? 0),
+        fats_g: Number(data.base_nutrition?.fats_g ?? 0),
+        sugar_g: Number(data.base_nutrition?.sugar_g ?? 0),
+        salt_mg: Number(data.base_nutrition?.salt_mg ?? 0),
+      };
       const nutrition: Nutrition = {
         calories: Number(data.nutrition?.calories ?? 0),
         carbs_g: Number(data.nutrition?.carbs_g ?? 0),
@@ -164,11 +187,53 @@ async function classifyOnServer(
       return {
         label: data.label,
         confidence: Number(data.confidence ?? 0),
+        baseNutrition,
         nutrition,
       };
     }
 
     return null;
+  } catch {
+    return null;
+  }
+}
+
+async function adjustOnServer(
+  label: string,
+  sliders: {
+    size: number;
+    sweetness: number;
+    saltiness: number;
+    oiliness: number;
+  }
+): Promise<{ nutrition: Nutrition } | null> {
+  try {
+    const formData = new FormData();
+    formData.append("label", label);
+    formData.append("size", String(sliders.size));
+    formData.append("sweetness", String(sliders.sweetness));
+    formData.append("saltiness", String(sliders.saltiness));
+    formData.append("oiliness", String(sliders.oiliness));
+
+    const response = await fetch(ADJUST_ENDPOINT, {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      body: formData,
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+
+    const nutrition: Nutrition = {
+      calories: Number(data.nutrition?.calories ?? 0),
+      carbs_g: Number(data.nutrition?.carbs_g ?? 0),
+      protein_g: Number(data.nutrition?.protein_g ?? 0),
+      fats_g: Number(data.nutrition?.fats_g ?? 0),
+      sugar_g: Number(data.nutrition?.sugar_g ?? 0),
+      salt_mg: Number(data.nutrition?.salt_mg ?? 0),
+    };
+
+    return { nutrition };
   } catch {
     return null;
   }
@@ -181,6 +246,7 @@ export default function UploadParameters() {
   const [detectedConfidence, setDetectedConfidence] = useState<number | null>(
     null
   );
+  const [baseNutrition, setBaseNutrition] = useState<Nutrition | null>(null);
   const [detectedNutrition, setDetectedNutrition] = useState<Nutrition | null>(
     null
   );
@@ -196,22 +262,26 @@ export default function UploadParameters() {
   const [sweetness, setSweetness] = useState(0.5);
   const [saltiness, setSaltiness] = useState(0.5);
   const [oiliness, setOiliness] = useState(0.5);
+  const adjustDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const runDetection = async (uri: string) => {
     setIsDetecting(true);
     setDetectedFood(null);
     setDetectedConfidence(null);
+    setBaseNutrition(null);
     setDetectedNutrition(null);
-    // Reset sliders to the middle as soon as we start detection.
-    setSize(0.5);
-    setSweetness(0.5);
-    setSaltiness(0.5);
-    setOiliness(0.5);
     try {
-      const result = await classifyOnServer(uri);
+      const result = await classifyOnServer(uri, {
+        size,
+        sweetness,
+        saltiness,
+        oiliness,
+      });
       if (result) {
         setDetectedFood(result.label);
         setDetectedConfidence(result.confidence);
+        setBaseNutrition(result.baseNutrition);
         setDetectedNutrition(result.nutrition);
         setStatusMessage("Image uploaded......100%");
       } else {
@@ -227,6 +297,35 @@ export default function UploadParameters() {
       setIsDetecting(false);
     }
   };
+
+  useEffect(() => {
+    if (!detectedFood) return;
+    if (!baseNutrition) return;
+    if (isDetecting) return;
+
+    if (adjustDebounceRef.current) {
+      clearTimeout(adjustDebounceRef.current);
+    }
+
+    adjustDebounceRef.current = setTimeout(async () => {
+      const res = await adjustOnServer(detectedFood, {
+        size,
+        sweetness,
+        saltiness,
+        oiliness,
+      });
+      if (res?.nutrition) {
+        setDetectedNutrition(res.nutrition);
+      }
+    }, 250);
+
+    return () => {
+      if (adjustDebounceRef.current) {
+        clearTimeout(adjustDebounceRef.current);
+        adjustDebounceRef.current = null;
+      }
+    };
+  }, [detectedFood, baseNutrition, isDetecting, size, sweetness, saltiness, oiliness]);
 
   const pickImage = async (source: "upload" | "camera") => {
     setLastSource(source);
@@ -270,6 +369,60 @@ export default function UploadParameters() {
       }
     } catch {
       setStatusMessage("Something went wrong while picking the image.");
+    }
+  };
+
+  const saveMealLog = async () => {
+    const userId = await getStoredUserId();
+    if (!userId) {
+      Alert.alert(
+        "Sign in required",
+        "Log in to save this meal to your log and dashboards."
+      );
+      return;
+    }
+    if (!detectedFood || !detectedNutrition || !baseNutrition) {
+      Alert.alert(
+        "Nothing to save",
+        "Take or upload a food photo and wait for detection first."
+      );
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(apiUrl("/logs"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          food_label: detectedFood,
+          confidence:
+            typeof detectedConfidence === "number" ? detectedConfidence : null,
+          size,
+          sweetness,
+          saltiness,
+          oiliness,
+          base_nutrition: baseNutrition,
+          nutrition: detectedNutrition,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Alert.alert(
+          "Could not save",
+          typeof data?.detail === "string" ? data.detail : "Try again."
+        );
+        return;
+      }
+      router.replace("/DailyDashboard");
+    } catch {
+      Alert.alert("Could not save", "Check your connection to the server.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -390,9 +543,12 @@ export default function UploadParameters() {
             <TouchableOpacity
               style={styles.saveButton}
               activeOpacity={0.9}
-              onPress={() => router.replace("/DailyDashboard")}
+              onPress={() => void saveMealLog()}
+              disabled={isSaving}
             >
-              <Text style={styles.saveButtonText}>Save Changes</Text>
+              <Text style={styles.saveButtonText}>
+                {isSaving ? "Saving..." : "Save to log"}
+              </Text>
             </TouchableOpacity>
           </ScrollView>
         </View>

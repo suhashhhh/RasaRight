@@ -4,4 +4,8 @@ torch
 torchvision
 pillow
 python-multipart
+psycopg2-binary
+bcrypt
+email-validator
+python-dotenv
 

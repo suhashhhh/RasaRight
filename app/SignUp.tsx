@@ -8,13 +8,31 @@ import {
   View,
   Pressable,
 } from "react-native";
+import { useRouter } from "expo-router";
+
+function extractErrorMessage(data: any): string {
+  const detail = data?.detail;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail) && detail.length > 0) {
+    const first = detail[0];
+    if (typeof first === "string") return first;
+    if (first && typeof first.msg === "string") return first.msg;
+  }
+  if (data?.message && typeof data.message === "string") return data.message;
+  return "Failed to create account.";
+}
 
 export default function SignUp() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
+  const [gender, setGender] = useState("");
+  const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [diabetes, setDiabetes] = useState(false);
   const [obesity, setObesity] = useState(false);
@@ -22,6 +40,65 @@ export default function SignUp() {
 
   const toggle = (setter: (v: boolean) => void, current: boolean) =>
     setter(!current);
+
+  const API_BASE_URL =
+    process.env.EXPO_PUBLIC_API_BASE_URL?.trim() || "http://192.168.1.8:8082";
+
+  const onCreateAccount = async () => {
+    setStatusMessage("");
+
+    if (!email.trim() || !username.trim() || !password.trim()) {
+      setStatusMessage("Email, username, and password are required.");
+      return;
+    }
+
+    const conditions: string[] = [];
+    if (diabetes) conditions.push("diabetes");
+    if (obesity) conditions.push("obesity_overweight");
+    if (hypertension) conditions.push("hypertension");
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL.replace(/\/+$/, "")}/auth/signup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            email: email.trim(),
+            username: username.trim(),
+            full_name: fullName.trim() || null,
+            gender: gender.trim() || null,
+            password,
+            weight_kg: weight.trim() ? Number(weight) : null,
+            height_cm: height.trim() ? Number(height) : null,
+            health_conditions: conditions,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        setStatusMessage(extractErrorMessage(data));
+        return;
+      }
+
+      router.replace({
+        pathname: "/LogIn",
+        params: {
+          accountCreated: "1",
+          identifier: email.trim(),
+        },
+      });
+    } catch {
+      setStatusMessage("Could not connect to server.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -41,6 +118,28 @@ export default function SignUp() {
               placeholderTextColor="#b8b8b8"
               value={fullName}
               onChangeText={setFullName}
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <TextInput
+              style={styles.input}
+              placeholder="Gender (e.g., male/female)"
+              placeholderTextColor="#b8b8b8"
+              value={gender}
+              onChangeText={setGender}
+            />
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor="#b8b8b8"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={email}
+              onChangeText={setEmail}
             />
           </View>
 
@@ -141,12 +240,16 @@ export default function SignUp() {
           <TouchableOpacity
             style={styles.button}
             activeOpacity={0.9}
-            onPress={() => {
-              // TODO: handle real sign-up submission
-            }}
+            onPress={onCreateAccount}
+            disabled={isSubmitting}
           >
-            <Text style={styles.buttonText}>Create Account</Text>
+            <Text style={styles.buttonText}>
+              {isSubmitting ? "Creating..." : "Create Account"}
+            </Text>
           </TouchableOpacity>
+          {!!statusMessage && (
+            <Text style={styles.statusText}>{statusMessage}</Text>
+          )}
         </View>
 
         <Text style={styles.footerText}>Stay Healthy!</Text>
@@ -264,6 +367,12 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  statusText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#333333",
+    textAlign: "center",
   },
   footerText: {
     textAlign: "center",

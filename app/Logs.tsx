@@ -1,49 +1,136 @@
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
-  Image,
   SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
+import type { FoodLogListItem } from "./api";
+import { apiUrl } from "./api";
+import { getStoredUserId } from "./session";
 
-type LogEntry = {
-  id: string;
-  name: string;
-  date: string;
-  time: string;
-  imageUri: string | null;
-};
+function formatLocalDateTime(iso: string | null): { date: string; time: string } {
+  if (!iso) return { date: "—", time: "—" };
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return { date: "—", time: "—" };
+  return {
+    date: d.toLocaleDateString(),
+    time: d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+}
 
-const MOCK_LOGS: LogEntry[] = [
-  { id: "1", name: "Nasi Lemak", date: "17/1/26", time: "13:16", imageUri: null },
-  { id: "2", name: "Nasi Lemak", date: "15/1/26", time: "22:16", imageUri: null },
-  { id: "3", name: "Nasi Lemak", date: "15/1/26", time: "08:16", imageUri: null },
-];
-
-function LogRow({ item }: { item: LogEntry }) {
+function LogRow({
+  item,
+  onDelete,
+}: {
+  item: FoodLogListItem;
+  onDelete: (id: string) => void;
+}) {
+  const { date, time } = formatLocalDateTime(item.logged_at);
   return (
     <View style={styles.logRow}>
-      <View style={styles.logImageBox}>
-        {item.imageUri ? (
-          <Image source={{ uri: item.imageUri }} style={styles.logImage} />
-        ) : (
-          <View style={styles.logImagePlaceholder} />
-        )}
-      </View>
       <View style={styles.logDetails}>
-        <Text style={styles.logLine}>Name: {item.name}</Text>
-        <Text style={styles.logLine}>Date: {item.date}</Text>
-        <Text style={styles.logLine}>Time: {item.time}</Text>
+        <Text style={styles.logLine}>{item.food_label}</Text>
+        <Text style={styles.logLineMuted}>
+          {date} · {time}
+        </Text>
       </View>
+      <TouchableOpacity
+        style={styles.deleteBtn}
+        activeOpacity={0.8}
+        onPress={() => onDelete(item.id)}
+      >
+        <Text style={styles.deleteBtnText}>Delete</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 export default function Logs() {
   const router = useRouter();
+  const [logs, setLogs] = useState<FoodLogListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [banner, setBanner] = useState<string | null>(null);
+
+  const loadLogs = useCallback(async () => {
+    setBanner(null);
+    const userId = await getStoredUserId();
+    if (!userId) {
+      setLogs([]);
+      setLoading(false);
+      setBanner("Log in to see your meal logs.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${apiUrl("/logs")}?user_id=${encodeURIComponent(userId)}`,
+        { headers: { Accept: "application/json" } }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setLogs([]);
+        setBanner(
+          typeof data?.detail === "string" ? data.detail : "Could not load logs."
+        );
+        return;
+      }
+      setLogs(Array.isArray(data.logs) ? data.logs : []);
+    } catch {
+      setLogs([]);
+      setBanner("Could not reach server.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadLogs();
+    }, [loadLogs])
+  );
+
+  const confirmDelete = (id: string) => {
+    Alert.alert(
+      "Delete this log?",
+      "This removes the entry from your history and dashboards.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => void deleteLog(id),
+        },
+      ]
+    );
+  };
+
+  const deleteLog = async (id: string) => {
+    const userId = await getStoredUserId();
+    if (!userId) return;
+    try {
+      const res = await fetch(
+        `${apiUrl(`/logs/${encodeURIComponent(id)}`)}?user_id=${encodeURIComponent(userId)}`,
+        { method: "DELETE", headers: { Accept: "application/json" } }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Alert.alert(
+          "Could not delete",
+          typeof data?.detail === "string" ? data.detail : "Try again."
+        );
+        return;
+      }
+      setLogs((prev) => prev.filter((x) => x.id !== id));
+    } catch {
+      Alert.alert("Could not delete", "Check your connection.");
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -54,14 +141,30 @@ export default function Logs() {
           <Text style={styles.logsPillText}>Logs</Text>
         </View>
 
-        <FlatList
-          data={MOCK_LOGS}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <LogRow item={item} />}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator
-          indicatorStyle="default"
-        />
+        {!!banner && (
+          <Text style={styles.bannerText}>{banner}</Text>
+        )}
+
+        {loading ? (
+          <ActivityIndicator color="#7AD957" style={{ marginVertical: 24 }} />
+        ) : (
+          <FlatList
+            data={logs}
+            keyExtractor={(item) => item.id}
+            ListEmptyComponent={
+              !banner ? (
+                <Text style={styles.emptyText}>
+                  No meals logged yet. Upload a meal from the dashboard.
+                </Text>
+              ) : null
+            }
+            renderItem={({ item }) => (
+              <LogRow item={item} onDelete={confirmDelete} />
+            )}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator
+          />
+        )}
 
         <TouchableOpacity
           style={styles.returnButton}
@@ -107,12 +210,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
+  bannerText: {
+    fontSize: 13,
+    color: "#555555",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#555555",
+    textAlign: "center",
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
   listContent: {
     paddingBottom: 16,
+    flexGrow: 1,
   },
   logRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#ffffff",
     borderRadius: 12,
     padding: 12,
@@ -123,29 +241,30 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  logImageBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    overflow: "hidden",
-    marginRight: 14,
-  },
-  logImage: {
-    width: "100%",
-    height: "100%",
-  },
-  logImagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "#e8e8e8",
-  },
   logDetails: {
     flex: 1,
+    marginRight: 10,
   },
   logLine: {
-    fontSize: 14,
-    color: "#333333",
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#222222",
+    marginBottom: 4,
+  },
+  logLineMuted: {
+    fontSize: 13,
+    color: "#666666",
+  },
+  deleteBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#e8e8e8",
+  },
+  deleteBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#a33",
   },
   returnButton: {
     alignSelf: "center",

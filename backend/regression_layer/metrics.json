@@ -1,0 +1,22 @@
+{
+  "model_type": "linear_matrix",
+  "samples": 19500,
+  "test_size": 0.2,
+  "mae": 0.02413254949219221,
+  "r2": 0.9809242242975085,
+  "features": [
+    "size",
+    "sweetness",
+    "saltiness",
+    "oiliness"
+  ],
+  "outputs": [
+    "calories",
+    "carbs_g",
+    "protein_g",
+    "fats_g",
+    "sugar_g",
+    "salt_mg"
+  ],
+  "model_path": "C:\\Users\\Asus\\LocalFile\\Desktop\\RasaRight\\backend\\regression_layer\\multiplier_model_matrix.json"
+}

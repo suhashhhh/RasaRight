@@ -1,4 +1,6 @@
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -6,97 +8,75 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
-
-const DAY_LABELS = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-];
-
-// Demo values: 7 days per metric (normalized 0–1)
-const WEEK_DATA = {
-  calories: [0.72, 0.85, 0.58, 0.91, 0.64, 0.78, 0.82],
-  fats: [0.35, 0.52, 0.48, 0.61, 0.42, 0.55, 0.38],
-  sugar: [0.58, 0.44, 0.67, 0.51, 0.73, 0.59, 0.62],
-  salt: [0.41, 0.55, 0.38, 0.62, 0.47, 0.52, 0.45],
-};
+import { useFocusEffect, useRouter } from "expo-router";
+import type { DayTotals } from "./api";
+import { apiUrl } from "./api";
+import { clearStoredUserId, getStoredUserId } from "./session";
 
 const CHART_HEIGHT = 72;
-const Y_TICKS = 5; // 0, 1/4, 1/2, 3/4, 1 of max
+const Y_TICKS = 5;
 
-function BarChart({
-  title,
-  yLabel,
-  yMax,
-  values,
-}: {
-  title: string;
-  yLabel: string;
-  yMax: number;
-  values: number[];
-}) {
-  const yTickValues = Array.from({ length: Y_TICKS }, (_, i) =>
-    Math.round((yMax * (Y_TICKS - 1 - i)) / (Y_TICKS - 1))
-  );
-
-  return (
-    <View style={styles.chartCell}>
-      <Text style={styles.chartTitle}>{title}</Text>
-      <View style={styles.chartRow}>
-        <View style={styles.yAxisColumn}>
-          <Text style={styles.yAxisLabel}>{yLabel}</Text>
-          <View style={[styles.yAxisTicks, { height: CHART_HEIGHT }]}>
-            {yTickValues.map((tick, i) => (
-              <Text key={i} style={styles.yAxisTick}>
-                {tick}
-              </Text>
-            ))}
-          </View>
-        </View>
-        <View style={styles.chartArea}>
-          <View style={[styles.barsRow, { height: CHART_HEIGHT }]}>
-            {values.map((v, i) => {
-              const barH = Math.max(4, v * CHART_HEIGHT);
-              const actualValue = Math.round(v * yMax);
-              return (
-                <View key={i} style={styles.barColumn}>
-                  <Text style={[styles.barValue, { bottom: barH + 4 }]}>
-                    {actualValue}
-                  </Text>
-                  <View
-                    style={[
-                      styles.bar,
-                      {
-                        height: barH,
-                        backgroundColor:
-                          i % 2 === 0 ? "#F9B24B" : "rgba(255,255,255,0.9)",
-                      },
-                    ]}
-                  />
-                </View>
-              );
-            })}
-          </View>
-          <View style={styles.xAxisRow}>
-            {DAY_LABELS.map((d, i) => (
-              <Text key={i} style={styles.dayLabel} numberOfLines={1}>
-                {d}
-              </Text>
-            ))}
-          </View>
-        </View>
-      </View>
-    </View>
-  );
+function weekdayShort(isoDate: string): string {
+  const dt = new Date(`${isoDate}T12:00:00Z`);
+  return dt.toLocaleDateString(undefined, { weekday: "short" });
 }
 
 export default function WeeklyDashboard() {
   const router = useRouter();
+  const [week, setWeek] = useState<DayTotals[]>([]);
+  const [dayLabels, setDayLabels] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const loadSummary = useCallback(async () => {
+    setLoadError(null);
+    const userId = await getStoredUserId();
+    if (!userId) {
+      setWeek([]);
+      setDayLabels([]);
+      setLoading(false);
+      setLoadError("Log in to see weekly totals.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${apiUrl("/logs/summary")}?user_id=${encodeURIComponent(userId)}`,
+        { headers: { Accept: "application/json" } }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setLoadError(
+          typeof data?.detail === "string"
+            ? data.detail
+            : "Could not load summary."
+        );
+        setWeek([]);
+        setDayLabels([]);
+        return;
+      }
+      const w: DayTotals[] = data.week ?? [];
+      setWeek(w);
+      setDayLabels(w.map((d) => weekdayShort(d.date)));
+    } catch {
+      setLoadError("Could not reach server.");
+      setWeek([]);
+      setDayLabels([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSummary();
+    }, [loadSummary])
+  );
+
+  const calories = week.map((d) => d.calories);
+  const fats = week.map((d) => d.fats_g);
+  const sugar = week.map((d) => d.sugar_g);
+  const salt = week.map((d) => d.salt_mg);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -105,7 +85,10 @@ export default function WeeklyDashboard() {
           <TouchableOpacity
             style={styles.logoutButton}
             activeOpacity={0.7}
-            onPress={() => router.replace("/LogIn")}
+            onPress={async () => {
+              await clearStoredUserId();
+              router.replace("/LogIn");
+            }}
           >
             <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
@@ -136,44 +119,129 @@ export default function WeeklyDashboard() {
               <Text style={styles.smallPillButtonText}>Logs</Text>
             </TouchableOpacity>
             <Text style={styles.progressTitle}>Weekly Progress</Text>
-            <TouchableOpacity style={styles.smallPillButton}>
-              <Text style={styles.smallPillButtonText}>Download</Text>
-            </TouchableOpacity>
+            <View style={styles.smallPillSpacer} />
           </View>
 
-          <ScrollView
-            style={styles.chartsScroll}
-            contentContainerStyle={styles.chartsGrid}
-            showsVerticalScrollIndicator={false}
-          >
-            <BarChart
-              title="Calories"
-              yLabel="Calories"
-              yMax={2000}
-              values={WEEK_DATA.calories}
-            />
-            <BarChart
-              title="Fats"
-              yLabel="Fats (g)"
-              yMax={100}
-              values={WEEK_DATA.fats}
-            />
-            <BarChart
-              title="Sugar"
-              yLabel="Sugar (g)"
-              yMax={100}
-              values={WEEK_DATA.sugar}
-            />
-            <BarChart
-              title="Salt"
-              yLabel="Salt (g)"
-              yMax={50}
-              values={WEEK_DATA.salt}
-            />
-          </ScrollView>
+          {loading ? (
+            <ActivityIndicator color="#ffffff" style={{ marginVertical: 24 }} />
+          ) : loadError || week.length === 0 ? (
+            <Text style={styles.chartPlaceholder}>
+              {loadError || "No weekly data yet. Log a meal to see charts."}
+            </Text>
+          ) : (
+            <ScrollView
+              style={styles.chartsScroll}
+              contentContainerStyle={styles.chartsGrid}
+              showsVerticalScrollIndicator={false}
+            >
+              <ChartWithLabels
+                title="Calories"
+                yLabel="kcal"
+                values={calories}
+                labels={dayLabels}
+              />
+              <ChartWithLabels
+                title="Fats"
+                yLabel="g"
+                values={fats}
+                labels={dayLabels}
+              />
+              <ChartWithLabels
+                title="Sugar"
+                yLabel="g"
+                values={sugar}
+                labels={dayLabels}
+              />
+              <ChartWithLabels
+                title="Salt"
+                yLabel="mg"
+                values={salt}
+                labels={dayLabels}
+              />
+            </ScrollView>
+          )}
         </View>
+
+        <TouchableOpacity
+          style={styles.uploadCta}
+          activeOpacity={0.9}
+          onPress={() => router.push("/UploadParameters")}
+        >
+          <Text style={styles.uploadCtaText}>Take/Upload Image</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
+  );
+}
+
+function ChartWithLabels({
+  title,
+  yLabel,
+  values,
+  labels,
+}: {
+  title: string;
+  yLabel: string;
+  values: number[];
+  labels: string[];
+}) {
+  const safeVals =
+    values.length > 0 ? values : new Array(7).fill(0);
+  const yMax = Math.max(1, ...safeVals);
+  const tickTop = Math.ceil(yMax);
+  const yTickValues = Array.from({ length: Y_TICKS }, (_, i) =>
+    Math.round((tickTop * (Y_TICKS - 1 - i)) / (Y_TICKS - 1))
+  );
+
+  return (
+    <View style={styles.chartCell}>
+      <Text style={styles.chartTitle}>{title}</Text>
+      <View style={styles.chartRow}>
+        <View style={styles.yAxisColumn}>
+          <Text style={styles.yAxisLabel}>{yLabel}</Text>
+          <View style={[styles.yAxisTicks, { height: CHART_HEIGHT }]}>
+            {yTickValues.map((tick, i) => (
+              <Text key={i} style={styles.yAxisTick}>
+                {tick}
+              </Text>
+            ))}
+          </View>
+        </View>
+        <View style={styles.chartArea}>
+          <View style={[styles.barsRow, { height: CHART_HEIGHT }]}>
+            {safeVals.map((v, i) => {
+              const barH = Math.max(4, (v / yMax) * CHART_HEIGHT);
+              const show =
+                v >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
+              return (
+                <View key={i} style={styles.barColumn}>
+                  <Text style={[styles.barValue, { bottom: barH + 4 }]}>
+                    {show}
+                  </Text>
+                  <View
+                    style={[
+                      styles.bar,
+                      {
+                        height: barH,
+                        backgroundColor:
+                          i % 2 === 0 ? "#F9B24B" : "rgba(255,255,255,0.9)",
+                      },
+                    ]}
+                  />
+                </View>
+              );
+            })}
+          </View>
+          <View style={styles.xAxisRow}>
+            {(labels.length > 0 ? labels : new Array(7).fill("—")).map((d, i) => (
+              <Text key={i} style={styles.dayLabel} numberOfLines={1}>
+                {d}
+              </Text>
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
   );
 }
 
@@ -241,6 +309,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
   },
+  chartPlaceholder: {
+    fontSize: 14,
+    color: "#f7ffe9",
+    textAlign: "center",
+    marginVertical: 24,
+    paddingHorizontal: 12,
+  },
   progressCard: {
     flex: 1,
     backgroundColor: "#7AD957",
@@ -259,6 +334,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 18,
     backgroundColor: "#F9B24B",
+    minWidth: 64,
+    alignItems: "center",
+  },
+  smallPillSpacer: {
+    minWidth: 64,
   },
   smallPillButtonText: {
     fontSize: 12,
@@ -269,6 +349,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     color: "#ffffff",
+    flex: 1,
+    textAlign: "center",
   },
   chartsScroll: {
     flex: 1,
@@ -350,5 +432,17 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
   },
+  uploadCta: {
+    marginTop: 14,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#7AD957",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  uploadCtaText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });
-
