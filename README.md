@@ -1,50 +1,135 @@
-# Welcome to your Expo app 👋
+# RasaRight
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+RasaRight is a cross-platform nutrition tracking app built with Expo (React Native) and FastAPI.
 
-## Get started
+The app lets users:
+- sign up and log in
+- upload/take food images
+- classify foods and estimate nutrition
+- view daily and weekly nutrition dashboards
+- save and review meal logs
 
-1. Install dependencies
+## Tech Stack
 
-   ```bash
-   npm install
-   ```
+- Frontend: Expo + React Native + Expo Router
+- Backend: FastAPI + Uvicorn
+- Database: PostgreSQL
+- ML/Nutrition: PyTorch-based model + nutrition mapping
 
-2. Start the app
+## Prerequisites
 
-   ```bash
-   npx expo start
-   ```
+- Node.js (LTS recommended)
+- npm
+- Python 3.10+
+- PostgreSQL
+- Expo Go (for physical phone testing)
 
-In the output, you'll find options to open the app in a
+## Environment Setup
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+1. Copy `.env.example` to `.env`
+2. Update values in `.env`:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```env
+EXPO_PUBLIC_API_BASE_URL=http://<your-laptop-ip>:8082
+DATABASE_URL=postgresql://postgres:<password>@localhost:5432/rasaright
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Notes:
+- Use your laptop LAN IP (not `localhost`) when testing on a phone.
+- For web-only local testing, localhost is fine.
 
-## Learn more
+## Install Dependencies
 
-To learn more about developing your project with Expo, look at the following resources:
+Frontend:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+npm install
+```
 
-## Join the community
+Backend:
 
-Join our community of developers creating universal apps.
+```bash
+python -m pip install -r backend/requirements.txt
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Run the Project
+
+### 1) Start backend API
+
+Windows:
+
+```bash
+start_server.bat
+```
+
+The API runs on `http://0.0.0.0:8082`.
+
+### 2) Start frontend for phone (recommended)
+
+```bash
+npm run start
+```
+
+This command uses `scripts/start_phone_dev.bat`, which:
+- detects your current laptop IP
+- sets mobile-safe Expo/API host values
+- starts Expo in LAN mode
+- avoids common `127.0.0.1` phone connection issues
+
+### 3) Web only
+
+```bash
+npm run web
+```
+
+## Useful Scripts
+
+- `npm run start` - phone-friendly startup flow
+- `npm run start:phone` - same as `start`
+- `npm run start:mobile` - Expo LAN + clear cache
+- `npm run start:lan` - Expo LAN
+- `npm run start:tunnel` - Expo tunnel (may be less reliable depending on ngrok)
+- `npm run android` - open Android flow
+- `npm run ios` - open iOS flow
+- `npm run lint` - lint project
+
+## Project Structure
+
+- `app/` - app screens/routes (Expo Router)
+- `lib/` - shared frontend logic (API/session helpers)
+- `backend/` - FastAPI app and backend logic
+- `scripts/` - helper scripts (firewall and mobile startup)
+- `assets/` - icons/images
+
+## Phone Connectivity Troubleshooting
+
+If Expo Go cannot connect:
+
+1. Confirm phone and laptop are on the same network.
+2. Do not use `exp://127.0.0.1:...` on phone.
+3. Run firewall helper as Administrator (once):
+
+```bash
+scripts\allow_rasaright_dev_firewall.bat
+```
+
+4. Verify backend from phone browser:
+
+```text
+http://<laptop-ip>:8082/health
+```
+
+5. Restart with cache clear:
+
+```bash
+npx expo start --lan --clear
+```
+
+## Reference Notes
+
+- This repository is intended as a reference implementation for Expo + FastAPI + PostgreSQL mobile/web setup.
+- If you reuse code, update:
+  - environment variables
+  - API base URLs
+  - database credentials
+  - app name/icons/branding
