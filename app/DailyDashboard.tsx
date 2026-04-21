@@ -8,9 +8,9 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import type { DayTotals, LogsSummaryResponse } from "./api";
-import { apiUrl } from "./api";
-import { clearStoredUserId, getStoredUserId } from "./session";
+import type { DayTotals, LogsSummaryResponse } from "../lib/api";
+import { apiUrl } from "../lib/api";
+import { clearStoredUserId, getStoredUserId } from "../lib/session";
 
 const EMPTY_TODAY: DayTotals = {
   date: "",
@@ -293,12 +293,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#3A5A40",
   },
   logoutText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#ffffff",
   },
   brand: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     color: "#3A5A40",
     textAlign: "center",
@@ -326,15 +326,15 @@ const styles = StyleSheet.create({
   tabActiveText: {
     color: "#ffffff",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 15,
   },
   tabInactiveText: {
     color: "#3A5A40",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 15,
   },
   hintText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#888888",
     textAlign: "center",
     marginBottom: 8,
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
   },
   progressTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: "#ffffff",
     textAlign: "center",
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     width: 70,
-    fontSize: 14,
+    fontSize: 16,
     color: "#ffffff",
   },
   metricBarWrapper: {
@@ -384,13 +384,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   metricValue: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#f0f4f1",
     textAlign: "right",
   },
   entriesHint: {
     marginTop: 8,
-    fontSize: 12,
+    fontSize: 14,
     color: "#f0f4f1",
     textAlign: "center",
   },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: "#ffffff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
   },
 });

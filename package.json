@@ -3,7 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start --lan",
+    "start": "scripts\\start_phone_dev.bat",
+    "start:phone": "scripts\\start_phone_dev.bat",
+    "start:mobile": "expo start --lan --clear",
     "start:lan": "expo start --lan",
     "start:tunnel": "expo start --tunnel",
     "reset-project": "node ./scripts/reset-project.js",

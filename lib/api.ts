@@ -35,14 +35,13 @@ function inferApiHostFromExpo(): string | null {
 }
 
 function resolveApiBaseUrl(): string {
-  const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
-  if (fromEnv) return fromEnv;
   const inferred = inferApiHostFromExpo();
   if (inferred) return `http://${inferred}:8082`;
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL?.trim();
+  if (fromEnv) return fromEnv;
   if (!Constants.isDevice) {
     return "http://127.0.0.1:8082";
   }
-  // Physical device, no .env / extra / Expo host: iPhone Personal Hotspot often assigns the PC here.
   return "http://172.20.10.3:8082";
 }
 

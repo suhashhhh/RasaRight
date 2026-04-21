@@ -15,8 +15,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { apiUrl } from "./api";
-import { getStoredUserId } from "./session";
+import { apiUrl } from "../lib/api";
+import { getStoredUserId } from "../lib/session";
 
 type SliderProps = {
   labelLeft: string;
@@ -101,7 +101,7 @@ function Slider({ labelLeft, labelRight, value, onValueChange }: SliderProps) {
   );
 }
 
-// Set `EXPO_PUBLIC_API_BASE_URL` in `.env` (see `app/api.ts`).
+// Set `EXPO_PUBLIC_API_BASE_URL` in `.env` (see `lib/api.ts`).
 const CLASSIFY_ENDPOINT = apiUrl("/classify");
 const ADJUST_ENDPOINT = apiUrl("/adjust");
 
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     textAlign: "center",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
     color: "#3A5A40",
     marginBottom: 16,
@@ -605,14 +605,14 @@ const styles = StyleSheet.create({
   },
   primaryPillText: {
     color: "#ffffff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
   },
   statusTextBlock: {
     marginBottom: 24,
   },
   statusLine: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#333333",
   },
   statusHighlight: {
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     marginTop: 4,
-    fontSize: 11,
+    fontSize: 13,
     color: "#666666",
   },
   previewWrapper: {
@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sliderLabelText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#3A5A40",
   },
   sliderTrack: {
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#ffffff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
   },
   nutritionBlock: {
@@ -694,13 +694,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
   nutritionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     marginBottom: 6,
     color: "#333333",
   },
   nutritionLine: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#333333",
     marginTop: 2,
   },

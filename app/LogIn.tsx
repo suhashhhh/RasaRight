@@ -9,8 +9,8 @@ import {
   Switch,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { API_BASE_URL, apiUrl } from "./api";
-import { setStoredUserId } from "./session";
+import { API_BASE_URL, apiUrl } from "../lib/api";
+import { setStoredUserId } from "../lib/session";
 
 function extractErrorMessage(data: any): string {
   const detail = data?.detail;
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     textAlign: "center",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
     color: "#3A5A40",
     marginBottom: 16,
@@ -216,13 +216,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "700",
     marginBottom: 8,
     color: "#222222",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#555555",
     marginBottom: 24,
   },
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 16,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#243328",
     textAlign: "center",
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#555555",
     marginBottom: 6,
   },
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#ffffff",
     paddingHorizontal: 14,
-    fontSize: 14,
+    fontSize: 16,
     borderWidth: 1,
     borderColor: "#f0f0f0",
   },
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   rememberText: {
     marginLeft: 8,
-    fontSize: 13,
+    fontSize: 15,
     color: "#333333",
   },
   button: {
@@ -275,30 +275,30 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
   },
   secondaryActionText: {
     marginTop: 12,
     textAlign: "center",
-    fontSize: 13,
+    fontSize: 15,
     color: "#555555",
   },
   statusText: {
     marginTop: 10,
     textAlign: "center",
-    fontSize: 12,
+    fontSize: 14,
     color: "#333333",
   },
   devApiHint: {
     marginTop: 8,
-    fontSize: 11,
+    fontSize: 13,
     color: "#888888",
     textAlign: "center",
   },
   footerText: {
     textAlign: "center",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: "#3A5A40",
   },

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
-  Platform,
+  Modal,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -10,9 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { useRouter } from "expo-router";
-import { apiUrl } from "./api";
+import { apiUrl } from "../lib/api";
 
 function extractErrorMessage(data: any): string {
   const detail = data?.detail;
@@ -36,9 +35,7 @@ const ACTIVITY_OPTIONS: { label: string; value: number }[] = [
   { label: "Seven times a week", value: 7 },
 ];
 
-const AGE_RANGE = Array.from({ length: 120 }, (_, i) => i + 1);
-const WEIGHT_RANGE = Array.from({ length: 176 }, (_, i) => i + 25);
-const HEIGHT_RANGE = Array.from({ length: 121 }, (_, i) => i + 100);
+type PickerKey = "age" | "activity" | "weight" | "height";
 
 export default function SignUp() {
   const router = useRouter();
@@ -53,10 +50,50 @@ export default function SignUp() {
   const [heightCm, setHeightCm] = useState(170);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activePicker, setActivePicker] = useState<PickerKey | null>(null);
 
   const [diabetes, setDiabetes] = useState(false);
   const [obesity, setObesity] = useState(false);
   const [hypertension, setHypertension] = useState(false);
+  const ageOptions = useMemo(
+    () => Array.from({ length: 120 }, (_, i) => ({ value: i + 1, label: `${i + 1}` })),
+    []
+  );
+  const weightOptions = useMemo(
+    () => Array.from({ length: 176 }, (_, i) => ({ value: i + 25, label: `${i + 25} kg` })),
+    []
+  );
+  const heightOptions = useMemo(
+    () => Array.from({ length: 121 }, (_, i) => ({ value: i + 100, label: `${i + 100} cm` })),
+    []
+  );
+
+  const pickerConfig = {
+    age: {
+      title: "Select age",
+      value: ageYears,
+      options: ageOptions,
+      onChange: setAgeYears,
+    },
+    activity: {
+      title: "Select activity",
+      value: activityDaysPerWeek,
+      options: ACTIVITY_OPTIONS,
+      onChange: setActivityDaysPerWeek,
+    },
+    weight: {
+      title: "Select weight",
+      value: weightKg,
+      options: weightOptions,
+      onChange: setWeightKg,
+    },
+    height: {
+      title: "Select height",
+      value: heightCm,
+      options: heightOptions,
+      onChange: setHeightCm,
+    },
+  } as const;
 
   const toggle = (setter: (v: boolean) => void, current: boolean) =>
     setter(!current);
@@ -187,44 +224,27 @@ export default function SignUp() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Age (years)</Text>
-              <View style={styles.pickerShell}>
-                <Picker
-                  selectedValue={ageYears}
-                  onValueChange={(v) => setAgeYears(Number(v))}
-                  style={[
-                    styles.picker,
-                    Platform.OS === "ios" && styles.pickerIos,
-                  ]}
-                  itemStyle={styles.pickerItemIos}
-                >
-                  {AGE_RANGE.map((a) => (
-                    <Picker.Item key={a} label={`${a}`} value={a} />
-                  ))}
-                </Picker>
-              </View>
+              <Pressable
+                style={styles.selectField}
+                onPress={() => setActivePicker("age")}
+              >
+                <Text style={styles.selectFieldText}>{ageYears}</Text>
+              </Pressable>
             </View>
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Physical activity</Text>
-              <View style={styles.pickerShell}>
-                <Picker
-                  selectedValue={activityDaysPerWeek}
-                  onValueChange={(v) => setActivityDaysPerWeek(Number(v))}
-                  style={[
-                    styles.picker,
-                    Platform.OS === "ios" && styles.pickerIosTall,
-                  ]}
-                  itemStyle={styles.pickerItemIosSmall}
-                >
-                  {ACTIVITY_OPTIONS.map((o) => (
-                    <Picker.Item
-                      key={o.value}
-                      label={o.label}
-                      value={o.value}
-                    />
-                  ))}
-                </Picker>
-              </View>
+              <Pressable
+                style={styles.selectField}
+                onPress={() => setActivePicker("activity")}
+              >
+                <Text style={styles.selectFieldText}>
+                  {
+                    ACTIVITY_OPTIONS.find((o) => o.value === activityDaysPerWeek)?.label ??
+                    `${activityDaysPerWeek}`
+                  }
+                </Text>
+              </Pressable>
             </View>
 
             <View style={styles.fieldGroup}>
@@ -262,40 +282,22 @@ export default function SignUp() {
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Weight (kg)</Text>
-              <View style={styles.pickerShell}>
-                <Picker
-                  selectedValue={weightKg}
-                  onValueChange={(v) => setWeightKg(Number(v))}
-                  style={[
-                    styles.picker,
-                    Platform.OS === "ios" && styles.pickerIos,
-                  ]}
-                  itemStyle={styles.pickerItemIos}
-                >
-                  {WEIGHT_RANGE.map((w) => (
-                    <Picker.Item key={w} label={`${w} kg`} value={w} />
-                  ))}
-                </Picker>
-              </View>
+              <Pressable
+                style={styles.selectField}
+                onPress={() => setActivePicker("weight")}
+              >
+                <Text style={styles.selectFieldText}>{weightKg} kg</Text>
+              </Pressable>
             </View>
 
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Height (cm)</Text>
-              <View style={styles.pickerShell}>
-                <Picker
-                  selectedValue={heightCm}
-                  onValueChange={(v) => setHeightCm(Number(v))}
-                  style={[
-                    styles.picker,
-                    Platform.OS === "ios" && styles.pickerIos,
-                  ]}
-                  itemStyle={styles.pickerItemIos}
-                >
-                  {HEIGHT_RANGE.map((h) => (
-                    <Picker.Item key={h} label={`${h} cm`} value={h} />
-                  ))}
-                </Picker>
-              </View>
+              <Pressable
+                style={styles.selectField}
+                onPress={() => setActivePicker("height")}
+              >
+                <Text style={styles.selectFieldText}>{heightCm} cm</Text>
+              </Pressable>
             </View>
 
             <View style={styles.conditionsSection}>
@@ -367,6 +369,52 @@ export default function SignUp() {
 
         <Text style={styles.footerText}>Stay Healthy!</Text>
       </View>
+
+      <Modal
+        visible={activePicker !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActivePicker(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setActivePicker(null)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>
+              {activePicker ? pickerConfig[activePicker].title : ""}
+            </Text>
+            <ScrollView style={styles.modalList} showsVerticalScrollIndicator>
+              {activePicker &&
+                pickerConfig[activePicker].options.map((o) => {
+                  const selected = o.value === pickerConfig[activePicker].value;
+                  return (
+                    <Pressable
+                      key={o.value}
+                      style={[styles.modalOption, selected && styles.modalOptionSelected]}
+                      onPress={() => {
+                        pickerConfig[activePicker].onChange(o.value);
+                        setActivePicker(null);
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalOptionText,
+                          selected && styles.modalOptionTextSelected,
+                        ]}
+                      >
+                        {o.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setActivePicker(null)}
+            >
+              <Text style={styles.modalCloseButtonText}>Done</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -385,7 +433,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     textAlign: "center",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
     color: "#3A5A40",
     marginBottom: 16,
@@ -410,13 +458,13 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: "700",
     marginBottom: 4,
     color: "#222222",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#555555",
     marginBottom: 16,
   },
@@ -424,7 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#222222",
     marginBottom: 6,
@@ -434,7 +482,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#ffffff",
     paddingHorizontal: 14,
-    fontSize: 14,
+    fontSize: 16,
     borderWidth: 1,
     borderColor: "#f0f0f0",
   },
@@ -457,43 +505,32 @@ const styles = StyleSheet.create({
     backgroundColor: "#e8ede9",
   },
   genderChipText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
     color: "#555555",
   },
   genderChipTextActive: {
     color: "#243328",
   },
-  pickerShell: {
-    borderRadius: 8,
+  selectField: {
+    minHeight: 50,
+    borderRadius: 10,
     backgroundColor: "#ffffff",
     borderWidth: 1,
     borderColor: "#f0f0f0",
-    overflow: "hidden",
+    paddingHorizontal: 14,
+    justifyContent: "center",
   },
-  picker: {
-    width: "100%",
-  },
-  pickerIos: {
-    height: 140,
-  },
-  pickerIosTall: {
-    height: 180,
-  },
-  pickerItemIos: {
-    fontSize: 18,
-    height: 36,
-  },
-  pickerItemIosSmall: {
-    fontSize: 15,
-    height: 34,
+  selectFieldText: {
+    fontSize: 16,
+    color: "#333333",
   },
   conditionsSection: {
     marginTop: 8,
     marginBottom: 12,
   },
   conditionsTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#222222",
     marginBottom: 8,
@@ -527,7 +564,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#3A5A40",
   },
   conditionLabel: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#333333",
   },
   button: {
@@ -540,20 +577,74 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
   },
   statusText: {
     marginTop: 10,
-    fontSize: 12,
+    fontSize: 14,
     color: "#333333",
     textAlign: "center",
   },
   footerText: {
     textAlign: "center",
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "700",
     color: "#3A5A40",
     marginTop: 12,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    maxHeight: "70%",
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#222222",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  modalList: {
+    maxHeight: 360,
+  },
+  modalOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 4,
+  },
+  modalOptionSelected: {
+    backgroundColor: "#e8ede9",
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: "#444444",
+    textAlign: "center",
+  },
+  modalOptionTextSelected: {
+    color: "#243328",
+    fontWeight: "700",
+  },
+  modalCloseButton: {
+    marginTop: 10,
+    alignSelf: "center",
+    backgroundColor: "#3A5A40",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 14,
+  },
+  modalCloseButtonText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
   },
 });

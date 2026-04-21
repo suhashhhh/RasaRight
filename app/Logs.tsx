@@ -10,9 +10,9 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import type { FoodLogListItem } from "./api";
-import { apiUrl } from "./api";
-import { getStoredUserId } from "./session";
+import type { FoodLogListItem } from "../lib/api";
+import { apiUrl } from "../lib/api";
+import { getStoredUserId } from "../lib/session";
 
 function formatLocalDateTime(iso: string | null): { date: string; time: string } {
   if (!iso) return { date: "—", time: "—" };
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   brand: {
     textAlign: "center",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "700",
     color: "#3A5A40",
     marginBottom: 12,
@@ -207,17 +207,17 @@ const styles = StyleSheet.create({
   },
   logsPillText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
   },
   bannerText: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#555555",
     textAlign: "center",
     marginBottom: 12,
   },
   emptyText: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#555555",
     textAlign: "center",
     marginTop: 24,
@@ -246,13 +246,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   logLine: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "600",
     color: "#222222",
     marginBottom: 4,
   },
   logLineMuted: {
-    fontSize: 13,
+    fontSize: 15,
     color: "#666666",
   },
   deleteBtn: {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#e8e8e8",
   },
   deleteBtnText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#a33",
   },
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   returnButtonText: {
     color: "#ffffff",
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
   },
 });

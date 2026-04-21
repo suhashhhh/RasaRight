@@ -9,9 +9,9 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import type { DayTotals, LogsSummaryResponse } from "./api";
-import { apiUrl } from "./api";
-import { clearStoredUserId, getStoredUserId } from "./session";
+import type { DayTotals, LogsSummaryResponse } from "../lib/api";
+import { apiUrl } from "../lib/api";
+import { clearStoredUserId, getStoredUserId } from "../lib/session";
 
 const CHART_HEIGHT = 88;
 const Y_TICKS = 5;
@@ -301,12 +301,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#3A5A40",
   },
   logoutText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#ffffff",
   },
   brand: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "700",
     color: "#3A5A40",
     textAlign: "center",
@@ -334,15 +334,15 @@ const styles = StyleSheet.create({
   tabActiveText: {
     color: "#ffffff",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 15,
   },
   tabInactiveText: {
     color: "#3A5A40",
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 15,
   },
   chartPlaceholder: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#f0f4f1",
     textAlign: "center",
     marginVertical: 24,
@@ -373,12 +373,12 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   smallPillButtonText: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#ffffff",
     fontWeight: "600",
   },
   progressTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
     color: "#ffffff",
     flex: 1,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   chartTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: "700",
     color: "#f0f4f1",
     marginBottom: 8,
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   yAxisLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
     color: "rgba(255,255,255,0.95)",
     marginBottom: 6,
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   yAxisTick: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "600",
     color: "#ffffff",
   },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   },
   barValue: {
     position: "absolute",
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "700",
     color: "#ffffff",
     textAlign: "center",
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   dayLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: "600",
     color: "#f0f4f1",
     flex: 1,
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   uploadCtaText: {
     color: "#ffffff",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
   },
 });
