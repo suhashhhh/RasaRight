@@ -1,4 +1,4 @@
-# RasaRight
+# RasaRight🥓🍳🥞
 
 RasaRight is a cross-platform nutrition tracking app built with Expo (React Native) and FastAPI.
 
