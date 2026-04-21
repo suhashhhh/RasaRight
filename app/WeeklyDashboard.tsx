@@ -9,11 +9,11 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import type { DayTotals } from "./api";
+import type { DayTotals, LogsSummaryResponse } from "./api";
 import { apiUrl } from "./api";
 import { clearStoredUserId, getStoredUserId } from "./session";
 
-const CHART_HEIGHT = 72;
+const CHART_HEIGHT = 88;
 const Y_TICKS = 5;
 
 function weekdayShort(isoDate: string): string {
@@ -24,6 +24,12 @@ function weekdayShort(isoDate: string): string {
 export default function WeeklyDashboard() {
   const router = useRouter();
   const [week, setWeek] = useState<DayTotals[]>([]);
+  const [targets, setTargets] = useState({
+    calories: 2000,
+    fats_g: 65,
+    sugar_g: 50,
+    salt_mg: 2300,
+  });
   const [dayLabels, setDayLabels] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -52,15 +58,36 @@ export default function WeeklyDashboard() {
             : "Could not load summary."
         );
         setWeek([]);
+        setTargets({
+          calories: 2000,
+          fats_g: 65,
+          sugar_g: 50,
+          salt_mg: 2300,
+        });
         setDayLabels([]);
         return;
       }
-      const w: DayTotals[] = data.week ?? [];
+      const summary = data as LogsSummaryResponse;
+      const w: DayTotals[] = summary.week ?? [];
       setWeek(w);
+      setTargets(
+        summary.targets ?? {
+          calories: 2000,
+          fats_g: 65,
+          sugar_g: 50,
+          salt_mg: 2300,
+        }
+      );
       setDayLabels(w.map((d) => weekdayShort(d.date)));
     } catch {
       setLoadError("Could not reach server.");
       setWeek([]);
+      setTargets({
+        calories: 2000,
+        fats_g: 65,
+        sugar_g: 50,
+        salt_mg: 2300,
+      });
       setDayLabels([]);
     } finally {
       setLoading(false);
@@ -139,24 +166,28 @@ export default function WeeklyDashboard() {
                 yLabel="kcal"
                 values={calories}
                 labels={dayLabels}
+                threshold={targets.calories}
               />
               <ChartWithLabels
                 title="Fats"
                 yLabel="g"
                 values={fats}
                 labels={dayLabels}
+                threshold={targets.fats_g}
               />
               <ChartWithLabels
                 title="Sugar"
                 yLabel="g"
                 values={sugar}
                 labels={dayLabels}
+                threshold={targets.sugar_g}
               />
               <ChartWithLabels
                 title="Salt"
                 yLabel="mg"
                 values={salt}
                 labels={dayLabels}
+                threshold={targets.salt_mg}
               />
             </ScrollView>
           )}
@@ -179,11 +210,13 @@ function ChartWithLabels({
   yLabel,
   values,
   labels,
+  threshold,
 }: {
   title: string;
   yLabel: string;
   values: number[];
   labels: string[];
+  threshold: number;
 }) {
   const safeVals =
     values.length > 0 ? values : new Array(7).fill(0);
@@ -215,7 +248,7 @@ function ChartWithLabels({
                 v >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
               return (
                 <View key={i} style={styles.barColumn}>
-                  <Text style={[styles.barValue, { bottom: barH + 4 }]}>
+                  <Text style={[styles.barValue, { bottom: barH + 6 }]}>
                     {show}
                   </Text>
                   <View
@@ -223,8 +256,7 @@ function ChartWithLabels({
                       styles.bar,
                       {
                         height: barH,
-                        backgroundColor:
-                          i % 2 === 0 ? "#F9B24B" : "rgba(255,255,255,0.9)",
+                        backgroundColor: v > threshold ? "#E74C3C" : i % 2 === 0 ? "#F9B24B" : "rgba(255,255,255,0.9)",
                       },
                     ]}
                   />
@@ -266,7 +298,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   logoutText: {
     fontSize: 13,
@@ -276,7 +308,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#7AD957",
+    color: "#3A5A40",
     textAlign: "center",
   },
   tabRow: {
@@ -289,7 +321,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   tabInactive: {
     paddingHorizontal: 22,
@@ -297,7 +329,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#7AD957",
+    borderColor: "#3A5A40",
   },
   tabActiveText: {
     color: "#ffffff",
@@ -305,20 +337,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   tabInactiveText: {
-    color: "#7AD957",
+    color: "#3A5A40",
     fontWeight: "600",
     fontSize: 13,
   },
   chartPlaceholder: {
     fontSize: 14,
-    color: "#f7ffe9",
+    color: "#f0f4f1",
     textAlign: "center",
     marginVertical: 24,
     paddingHorizontal: 12,
   },
   progressCard: {
     flex: 1,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 18,
@@ -363,10 +395,10 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   chartTitle: {
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#f7ffe9",
-    marginBottom: 6,
+    color: "#f0f4f1",
+    marginBottom: 8,
     textAlign: "center",
   },
   chartRow: {
@@ -374,19 +406,20 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
   },
   yAxisColumn: {
-    width: 40,
-    marginRight: 8,
+    width: 52,
+    marginRight: 10,
   },
   yAxisLabel: {
-    fontSize: 9,
-    color: "rgba(255,255,255,0.9)",
-    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.95)",
+    marginBottom: 6,
   },
   yAxisTicks: {
     justifyContent: "space-between",
   },
   yAxisTick: {
-    fontSize: 10,
+    fontSize: 13,
     fontWeight: "600",
     color: "#ffffff",
   },
@@ -411,13 +444,13 @@ const styles = StyleSheet.create({
   },
   barValue: {
     position: "absolute",
-    fontSize: 9,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
     color: "#ffffff",
     textAlign: "center",
   },
   bar: {
-    width: 16,
+    width: 18,
     minHeight: 4,
     borderRadius: 4,
   },
@@ -427,8 +460,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   dayLabel: {
-    fontSize: 8,
-    color: "#f7ffe9",
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#f0f4f1",
     flex: 1,
     textAlign: "center",
   },
@@ -436,7 +470,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     justifyContent: "center",
     alignItems: "center",
   },

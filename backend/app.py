@@ -32,6 +32,8 @@ class SignUpRequest(BaseModel):
   username: str = Field(min_length=3, max_length=50)
   full_name: str | None = None
   gender: str | None = None
+  age_years: int | None = Field(default=None, ge=1, le=120)
+  activity_days_per_week: int = Field(default=1, ge=1, le=7)
   password: str = Field(min_length=6)
   weight_kg: float | None = None
   height_cm: float | None = None
@@ -195,6 +197,8 @@ def ensure_db_tables():
             username TEXT UNIQUE NOT NULL,
             full_name TEXT,
             gender TEXT,
+            age_years INTEGER,
+            activity_days_per_week INTEGER NOT NULL DEFAULT 1,
             password_hash TEXT NOT NULL,
             weight_kg DOUBLE PRECISION,
             height_cm DOUBLE PRECISION,
@@ -206,6 +210,10 @@ def ensure_db_tables():
         )
         # Backward-compatible migration for existing databases.
         cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS gender TEXT;")
+        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS age_years INTEGER;")
+        cur.execute(
+          "ALTER TABLE users ADD COLUMN IF NOT EXISTS activity_days_per_week INTEGER NOT NULL DEFAULT 1;"
+        )
         cur.execute(
           """
           CREATE TABLE IF NOT EXISTS food_logs (
@@ -240,6 +248,86 @@ def _parse_uuid(value: str, field: str) -> str:
     return str(UUID(str(value).strip()))
   except ValueError as exc:
     raise HTTPException(status_code=400, detail=f"Invalid {field}.") from exc
+
+
+def _activity_multiplier(days_per_week: int) -> float:
+  # Map 1-7 active days to a conservative PAL range.
+  clamped = max(1, min(7, int(days_per_week)))
+  mapping = {
+    1: 1.20,
+    2: 1.30,
+    3: 1.40,
+    4: 1.50,
+    5: 1.60,
+    6: 1.70,
+    7: 1.80,
+  }
+  return mapping[clamped]
+
+
+def _derive_daily_targets(user_row: dict | None) -> dict[str, float]:
+  # Baseline defaults aligned to common public-health guidance.
+  default_targets = {
+    "calories": 2000.0,
+    "fats_g": round((2000.0 * 0.30) / 9.0, 1),
+    "sugar_g": round((2000.0 * 0.10) / 4.0, 1),
+    "salt_mg": 2000.0,
+  }
+  if not user_row:
+    return default_targets
+
+  weight_kg = user_row.get("weight_kg")
+  height_cm = user_row.get("height_cm")
+  age_years = user_row.get("age_years")
+  if weight_kg is None or height_cm is None or age_years is None:
+    return default_targets
+
+  try:
+    weight = float(weight_kg)
+    height = float(height_cm)
+    age = int(age_years)
+  except (TypeError, ValueError):
+    return default_targets
+
+  if weight <= 0 or height <= 0 or age <= 0:
+    return default_targets
+
+  gender = str(user_row.get("gender") or "").strip().lower()
+  # Mifflin-St Jeor sex constants.
+  if gender.startswith("m"):
+    sex_const = 5.0
+  elif gender.startswith("f"):
+    sex_const = -161.0
+  else:
+    sex_const = -78.0  # midpoint fallback when gender unspecified
+
+  activity_days = int(user_row.get("activity_days_per_week") or 1)
+  activity_mul = _activity_multiplier(activity_days)
+  bmr = 10.0 * weight + 6.25 * height - 5.0 * age + sex_const
+  calories = max(1200.0, bmr * activity_mul)
+
+  health_conditions = {
+    str(c).strip().lower() for c in (user_row.get("health_conditions") or [])
+  }
+  has_hypertension = "hypertension" in health_conditions
+  has_diabetes = "diabetes" in health_conditions
+  has_obesity = "obesity_overweight" in health_conditions
+
+  if has_obesity:
+    calories *= 0.90
+
+  fats_g = (calories * 0.30) / 9.0
+  sugar_g = (calories * 0.10) / 4.0
+  if has_diabetes or has_obesity:
+    sugar_g = min(sugar_g, 25.0)
+  salt_mg = 1500.0 if has_hypertension else 2000.0
+
+  return {
+    "calories": round(calories, 0),
+    "fats_g": round(fats_g, 1),
+    "sugar_g": round(sugar_g, 1),
+    "salt_mg": round(salt_mg, 0),
+  }
 
 
 def _fallback_multipliers(size: float, sweetness: float, saltiness: float, oiliness: float) -> list[float]:
@@ -447,6 +535,7 @@ async def auth_signup(payload: SignUpRequest):
   clean_gender = str(payload.gender).strip().lower() if payload.gender is not None else None
   if clean_gender == "":
     clean_gender = None
+  clean_activity_days = max(1, min(7, int(payload.activity_days_per_week)))
 
   try:
     with conn:
@@ -454,11 +543,11 @@ async def auth_signup(payload: SignUpRequest):
         cur.execute(
           """
           INSERT INTO users (
-            id, email, username, full_name, gender, password_hash,
+            id, email, username, full_name, gender, age_years, activity_days_per_week, password_hash,
             weight_kg, height_cm, health_conditions
           )
-          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-          RETURNING id, email, username, full_name, gender, weight_kg, height_cm, health_conditions;
+          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+          RETURNING id, email, username, full_name, gender, age_years, activity_days_per_week, weight_kg, height_cm, health_conditions;
           """,
           (
             user_id,
@@ -466,6 +555,8 @@ async def auth_signup(payload: SignUpRequest):
             payload.username.strip(),
             payload.full_name.strip() if payload.full_name else None,
             clean_gender,
+            payload.age_years,
+            clean_activity_days,
             password_hash,
             payload.weight_kg,
             payload.height_cm,
@@ -500,7 +591,7 @@ async def auth_login(payload: LoginRequest):
       with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute(
           """
-          SELECT id, email, username, full_name, gender, password_hash, weight_kg, height_cm, health_conditions
+          SELECT id, email, username, full_name, gender, age_years, activity_days_per_week, password_hash, weight_kg, height_cm, health_conditions
           FROM users
           WHERE lower(email) = lower(%s) OR lower(username) = lower(%s)
           LIMIT 1;
@@ -662,9 +753,23 @@ def food_logs_summary(user_id: str):
     raise HTTPException(status_code=500, detail="Database is not configured or unreachable.")
 
   uid = _parse_uuid(user_id, "user id")
+  user_row = None
   try:
     with conn:
       with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute(
+          """
+          SELECT id, gender, age_years, activity_days_per_week, weight_kg, height_cm, health_conditions
+          FROM users
+          WHERE id = %s::uuid
+          LIMIT 1;
+          """,
+          (uid,),
+        )
+        user_row = cur.fetchone()
+        if user_row is None:
+          raise HTTPException(status_code=404, detail="User not found.")
+
         cur.execute(
           """
           SELECT
@@ -704,6 +809,8 @@ def food_logs_summary(user_id: str):
           (uid,),
         )
         week_rows = cur.fetchall()
+  except HTTPException:
+    raise
   finally:
     conn.close()
 
@@ -757,6 +864,7 @@ def food_logs_summary(user_id: str):
       "entries": int(today_row.get("entries") or 0),
     },
     "week": week_out,
+    "targets": _derive_daily_targets(user_row),
   }
 
 

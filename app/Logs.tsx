@@ -146,7 +146,7 @@ export default function Logs() {
         )}
 
         {loading ? (
-          <ActivityIndicator color="#7AD957" style={{ marginVertical: 24 }} />
+          <ActivityIndicator color="#3A5A40" style={{ marginVertical: 24 }} />
         ) : (
           <FlatList
             data={logs}
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 28,
     fontWeight: "700",
-    color: "#7AD957",
+    color: "#3A5A40",
     marginBottom: 12,
   },
   logsPillWrap: {
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   logsPillText: {
     color: "#ffffff",
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 22,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   returnButtonText: {
     color: "#ffffff",

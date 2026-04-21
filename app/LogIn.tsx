@@ -9,7 +9,7 @@ import {
   Switch,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { apiUrl } from "./api";
+import { API_BASE_URL, apiUrl } from "./api";
 import { setStoredUserId } from "./session";
 
 function extractErrorMessage(data: any): string {
@@ -60,19 +60,27 @@ export default function Index() {
     setIsSubmitting(true);
     try {
       const response = await fetch(apiUrl("/auth/login"), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            identifier: email.trim(),
-            password,
-          }),
-        }
-      );
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          identifier: email.trim(),
+          password,
+        }),
+      });
 
-      const data = await response.json();
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        setStatusMessage(
+          `Server responded but not as JSON (${response.status}). Check ${API_BASE_URL}.`
+        );
+        return;
+      }
+
       if (!response.ok) {
         setStatusMessage(extractErrorMessage(data));
         return;
@@ -84,8 +92,12 @@ export default function Index() {
         await setStoredUserId(String(uid));
       }
       router.replace("/DailyDashboard");
-    } catch {
-      setStatusMessage("Could not connect to server.");
+    } catch (e: any) {
+      const msg =
+        typeof e?.message === "string" ? e.message : "Network error";
+      setStatusMessage(
+        `Cannot reach API at ${API_BASE_URL}. Start the backend (start_server.bat) and ensure port 8082 is free. (${msg})`
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -133,7 +145,7 @@ export default function Index() {
               value={rememberMe}
               onValueChange={setRememberMe}
               thumbColor={rememberMe ? "#ffffff" : "#ffffff"}
-              trackColor={{ false: "#e3e3e3", true: "#9fe890" }}
+              trackColor={{ false: "#e3e3e3", true: "#8aab94" }}
             />
             <Text style={styles.rememberText}>Remember me</Text>
           </View>
@@ -150,6 +162,11 @@ export default function Index() {
           </TouchableOpacity>
           {!!statusMessage && (
             <Text style={styles.statusText}>{statusMessage}</Text>
+          )}
+          {__DEV__ && (
+            <Text style={styles.devApiHint} numberOfLines={2}>
+              API: {API_BASE_URL}
+            </Text>
           )}
 
           <TouchableOpacity
@@ -182,7 +199,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 28,
     fontWeight: "700",
-    color: "#7AD957",
+    color: "#3A5A40",
     marginBottom: 16,
   },
   card: {
@@ -210,14 +227,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   successBanner: {
-    backgroundColor: "#e8f6e0",
+    backgroundColor: "#e8ede9",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginBottom: 16,
     fontSize: 13,
     fontWeight: "600",
-    color: "#2d6a1f",
+    color: "#243328",
     textAlign: "center",
     overflow: "hidden",
   },
@@ -250,7 +267,7 @@ const styles = StyleSheet.create({
     color: "#333333",
   },
   button: {
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     borderRadius: 24,
     height: 48,
     justifyContent: "center",
@@ -273,10 +290,16 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#333333",
   },
+  devApiHint: {
+    marginTop: 8,
+    fontSize: 11,
+    color: "#888888",
+    textAlign: "center",
+  },
   footerText: {
     textAlign: "center",
     fontSize: 20,
     fontWeight: "700",
-    color: "#7AD957",
+    color: "#3A5A40",
   },
 });

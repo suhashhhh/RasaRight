@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import type { DayTotals } from "./api";
+import type { DayTotals, LogsSummaryResponse } from "./api";
 import { apiUrl } from "./api";
 import { clearStoredUserId, getStoredUserId } from "./session";
 
@@ -23,8 +23,7 @@ const EMPTY_TODAY: DayTotals = {
   entries: 0,
 };
 
-/** Soft caps for bar fill only (actual values show as numbers). */
-const GOAL = {
+const DEFAULT_TARGETS = {
   calories: 2000,
   fats_g: 65,
   sugar_g: 50,
@@ -39,6 +38,7 @@ function barFraction(value: number, cap: number): number {
 export default function DailyDashboard() {
   const router = useRouter();
   const [today, setToday] = useState<DayTotals>(EMPTY_TODAY);
+  const [targets, setTargets] = useState(DEFAULT_TARGETS);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -65,12 +65,16 @@ export default function DailyDashboard() {
             : "Could not load summary."
         );
         setToday(EMPTY_TODAY);
+        setTargets(DEFAULT_TARGETS);
         return;
       }
-      setToday(data.today ?? EMPTY_TODAY);
+      const summary = data as LogsSummaryResponse;
+      setToday(summary.today ?? EMPTY_TODAY);
+      setTargets(summary.targets ?? DEFAULT_TARGETS);
     } catch {
       setLoadError("Could not reach server.");
       setToday(EMPTY_TODAY);
+      setTargets(DEFAULT_TARGETS);
     } finally {
       setLoading(false);
     }
@@ -83,10 +87,16 @@ export default function DailyDashboard() {
   );
 
   const progress = {
-    calories: barFraction(today.calories, GOAL.calories),
-    fats: barFraction(today.fats_g, GOAL.fats_g),
-    sugar: barFraction(today.sugar_g, GOAL.sugar_g),
-    salts: barFraction(today.salt_mg, GOAL.salt_mg),
+    calories: barFraction(today.calories, targets.calories),
+    fats: barFraction(today.fats_g, targets.fats_g),
+    sugar: barFraction(today.sugar_g, targets.sugar_g),
+    salts: barFraction(today.salt_mg, targets.salt_mg),
+  };
+  const exceeds = {
+    calories: today.calories > targets.calories,
+    fats: today.fats_g > targets.fats_g,
+    sugar: today.sugar_g > targets.sugar_g,
+    salts: today.salt_mg > targets.salt_mg,
   };
 
   return (
@@ -138,6 +148,7 @@ export default function DailyDashboard() {
                     <View
                       style={[
                         styles.metricBarFill,
+                        exceeds.calories && styles.metricBarFillExceeded,
                         { flex: progress.calories },
                       ]}
                     />
@@ -149,7 +160,7 @@ export default function DailyDashboard() {
                     />
                   </View>
                   <Text style={styles.metricValue}>
-                    {Math.round(today.calories)} calories
+                    {Math.round(today.calories)} / {Math.round(targets.calories)} calories
                   </Text>
                 </View>
               </View>
@@ -159,7 +170,11 @@ export default function DailyDashboard() {
                 <View style={styles.metricBarWrapper}>
                   <View style={styles.metricBarTrack}>
                     <View
-                      style={[styles.metricBarFill, { flex: progress.fats }]}
+                      style={[
+                        styles.metricBarFill,
+                        exceeds.fats && styles.metricBarFillExceeded,
+                        { flex: progress.fats },
+                      ]}
                     />
                     <View
                       style={[
@@ -169,7 +184,7 @@ export default function DailyDashboard() {
                     />
                   </View>
                   <Text style={styles.metricValue}>
-                    {today.fats_g.toFixed(1)} g
+                    {today.fats_g.toFixed(1)} / {targets.fats_g.toFixed(1)} g
                   </Text>
                 </View>
               </View>
@@ -179,7 +194,11 @@ export default function DailyDashboard() {
                 <View style={styles.metricBarWrapper}>
                   <View style={styles.metricBarTrack}>
                     <View
-                      style={[styles.metricBarFill, { flex: progress.sugar }]}
+                      style={[
+                        styles.metricBarFill,
+                        exceeds.sugar && styles.metricBarFillExceeded,
+                        { flex: progress.sugar },
+                      ]}
                     />
                     <View
                       style={[
@@ -189,7 +208,7 @@ export default function DailyDashboard() {
                     />
                   </View>
                   <Text style={styles.metricValue}>
-                    {today.sugar_g.toFixed(1)} g
+                    {today.sugar_g.toFixed(1)} / {targets.sugar_g.toFixed(1)} g
                   </Text>
                 </View>
               </View>
@@ -199,7 +218,11 @@ export default function DailyDashboard() {
                 <View style={styles.metricBarWrapper}>
                   <View style={styles.metricBarTrack}>
                     <View
-                      style={[styles.metricBarFill, { flex: progress.salts }]}
+                      style={[
+                        styles.metricBarFill,
+                        exceeds.salts && styles.metricBarFillExceeded,
+                        { flex: progress.salts },
+                      ]}
                     />
                     <View
                       style={[
@@ -209,7 +232,7 @@ export default function DailyDashboard() {
                     />
                   </View>
                   <Text style={styles.metricValue}>
-                    {Math.round(today.salt_mg)} mg
+                    {Math.round(today.salt_mg)} / {Math.round(targets.salt_mg)} mg
                   </Text>
                 </View>
               </View>
@@ -267,7 +290,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   logoutText: {
     fontSize: 13,
@@ -277,7 +300,7 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#7AD957",
+    color: "#3A5A40",
     textAlign: "center",
   },
   tabRow: {
@@ -290,7 +313,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   tabInactive: {
     paddingHorizontal: 22,
@@ -298,7 +321,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#7AD957",
+    borderColor: "#3A5A40",
   },
   tabActiveText: {
     color: "#ffffff",
@@ -306,7 +329,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   tabInactiveText: {
-    color: "#7AD957",
+    color: "#3A5A40",
     fontWeight: "600",
     fontSize: 13,
   },
@@ -318,7 +341,7 @@ const styles = StyleSheet.create({
   },
   progressCard: {
     flex: 1,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     borderRadius: 24,
     paddingHorizontal: 24,
     paddingVertical: 24,
@@ -354,18 +377,21 @@ const styles = StyleSheet.create({
   metricBarFill: {
     backgroundColor: "#F9B24B",
   },
+  metricBarFillExceeded: {
+    backgroundColor: "#E74C3C",
+  },
   metricBarRemaining: {
     backgroundColor: "#ffffff",
   },
   metricValue: {
     fontSize: 12,
-    color: "#f7ffe9",
+    color: "#f0f4f1",
     textAlign: "right",
   },
   entriesHint: {
     marginTop: 8,
     fontSize: 12,
-    color: "#f7ffe9",
+    color: "#f0f4f1",
     textAlign: "center",
   },
   bottomButtonsRow: {
@@ -377,7 +403,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     justifyContent: "center",
     alignItems: "center",
     marginHorizontal: 4,

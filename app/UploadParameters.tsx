@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 28,
     fontWeight: "700",
-    color: "#7AD957",
+    color: "#3A5A40",
     marginBottom: 16,
   },
   card: {
@@ -598,7 +598,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     justifyContent: "center",
     alignItems: "center",
     marginHorizontal: 4,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   },
   sliderLabelText: {
     fontSize: 12,
-    color: "#7AD957",
+    color: "#3A5A40",
   },
   sliderTrack: {
     height: 24,
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     right: 0,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#e5f7dd",
+    backgroundColor: "#e8ede9",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -664,14 +664,14 @@ const styles = StyleSheet.create({
     width: 2,
     height: 12,
     borderRadius: 1,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   sliderThumb: {
     position: "absolute",
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
     marginLeft: -9,
   },
   saveButton: {
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: "#7AD957",
+    backgroundColor: "#3A5A40",
   },
   saveButtonText: {
     color: "#ffffff",
