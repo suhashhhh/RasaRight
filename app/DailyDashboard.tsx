@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -11,6 +12,8 @@ import { useFocusEffect, useRouter } from "expo-router";
 import type { DayTotals, LogsSummaryResponse } from "../lib/api";
 import { apiUrl } from "../lib/api";
 import { clearStoredUserId, getStoredUserId } from "../lib/session";
+
+const LOGOUT_ICON = require("../assets/images/log out icon RR.jpg");
 
 const EMPTY_TODAY: DayTotals = {
   date: "",
@@ -103,19 +106,25 @@ export default function DailyDashboard() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-            onPress={async () => {
-              await clearStoredUserId();
-              router.replace("/LogIn");
-            }}
-          >
-            <Text style={styles.logoutText}>Log out</Text>
-          </TouchableOpacity>
-
+          <View style={styles.headerSpacer} />
           <Text style={styles.brand}>RasaRight</Text>
-          <View style={{ width: 60 }} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              onPress={async () => {
+                await clearStoredUserId();
+                router.replace("/LogIn");
+              }}
+            >
+              <Image
+                source={LOGOUT_ICON}
+                style={styles.logoutIcon}
+                contentFit="contain"
+              />
+              <Text style={styles.logoutText}>Log out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.tabRow}>
@@ -283,14 +292,29 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 12,
   },
+  headerSpacer: {
+    flex: 1,
+  },
+  headerRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
   logoutButton: {
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: "#3A5A40",
+    backgroundColor: "#A67B5B",
+  },
+  logoutIcon: {
+    width: 28,
+    height: 28,
+    marginRight: 8,
   },
   logoutText: {
     fontSize: 15,
@@ -298,6 +322,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   brand: {
+    flexShrink: 0,
     fontSize: 26,
     fontWeight: "700",
     color: "#3A5A40",

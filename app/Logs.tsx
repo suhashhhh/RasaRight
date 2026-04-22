@@ -135,7 +135,19 @@ export default function Logs() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.brand}>RasaRight</Text>
+        <View style={styles.logsHeaderRow}>
+          <View style={styles.logsHeaderSpacer} />
+          <Text style={styles.brand}>RasaRight</Text>
+          <View style={styles.logsHeaderRight}>
+            <TouchableOpacity
+              style={styles.returnPill}
+              activeOpacity={0.85}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.returnPillText}>Return</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.logsPillWrap}>
           <Text style={styles.logsPillText}>Logs</Text>
@@ -165,14 +177,6 @@ export default function Logs() {
             showsVerticalScrollIndicator
           />
         )}
-
-        <TouchableOpacity
-          style={styles.returnButton}
-          activeOpacity={0.9}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.returnButtonText}>Return</Text>
-        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -190,12 +194,39 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     backgroundColor: "#F4E6D2",
   },
+  logsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  logsHeaderSpacer: {
+    flex: 1,
+  },
+  logsHeaderRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  returnPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 18,
+    backgroundColor: "#F9B24B",
+    minWidth: 64,
+    alignItems: "center",
+  },
+  returnPillText: {
+    fontSize: 14,
+    color: "#ffffff",
+    fontWeight: "600",
+  },
   brand: {
+    flexShrink: 0,
     textAlign: "center",
     fontSize: 30,
     fontWeight: "700",
     color: "#3A5A40",
-    marginBottom: 12,
   },
   logsPillWrap: {
     alignSelf: "center",
@@ -265,18 +296,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: "#a33",
-  },
-  returnButton: {
-    alignSelf: "center",
-    marginTop: 8,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 22,
-    backgroundColor: "#3A5A40",
-  },
-  returnButtonText: {
-    color: "#ffffff",
-    fontSize: 18,
-    fontWeight: "600",
   },
 });

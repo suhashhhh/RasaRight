@@ -429,7 +429,19 @@ export default function UploadParameters() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.brand}>RasaRight</Text>
+        <View style={styles.uploadHeaderRow}>
+          <View style={styles.uploadHeaderSpacer} />
+          <Text style={styles.brand}>RasaRight</Text>
+          <View style={styles.uploadHeaderRight}>
+            <TouchableOpacity
+              style={styles.returnPill}
+              activeOpacity={0.85}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.returnPillText}>Return</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.card}>
           <ScrollView
@@ -569,12 +581,39 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     backgroundColor: "#F4E6D2",
   },
+  uploadHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  uploadHeaderSpacer: {
+    flex: 1,
+  },
+  uploadHeaderRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
+  returnPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 18,
+    backgroundColor: "#F9B24B",
+    minWidth: 64,
+    alignItems: "center",
+  },
+  returnPillText: {
+    fontSize: 14,
+    color: "#ffffff",
+    fontWeight: "600",
+  },
   brand: {
+    flexShrink: 0,
     textAlign: "center",
     fontSize: 30,
     fontWeight: "700",
     color: "#3A5A40",
-    marginBottom: 16,
   },
   card: {
     flex: 1,

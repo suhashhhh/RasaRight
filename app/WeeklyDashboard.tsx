@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,8 +14,9 @@ import type { DayTotals, LogsSummaryResponse } from "../lib/api";
 import { apiUrl } from "../lib/api";
 import { clearStoredUserId, getStoredUserId } from "../lib/session";
 
+const LOGOUT_ICON = require("../assets/images/log out icon RR.jpg");
+
 const CHART_HEIGHT = 88;
-const Y_TICKS = 5;
 
 function weekdayShort(isoDate: string): string {
   const dt = new Date(`${isoDate}T12:00:00Z`);
@@ -109,19 +111,25 @@ export default function WeeklyDashboard() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.logoutButton}
-            activeOpacity={0.7}
-            onPress={async () => {
-              await clearStoredUserId();
-              router.replace("/LogIn");
-            }}
-          >
-            <Text style={styles.logoutText}>Log out</Text>
-          </TouchableOpacity>
-
+          <View style={styles.headerSpacer} />
           <Text style={styles.brand}>RasaRight</Text>
-          <View style={{ width: 60 }} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              activeOpacity={0.7}
+              onPress={async () => {
+                await clearStoredUserId();
+                router.replace("/LogIn");
+              }}
+            >
+              <Image
+                source={LOGOUT_ICON}
+                style={styles.logoutIcon}
+                contentFit="contain"
+              />
+              <Text style={styles.logoutText}>Log out</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.tabRow}>
@@ -221,26 +229,11 @@ function ChartWithLabels({
   const safeVals =
     values.length > 0 ? values : new Array(7).fill(0);
   const yMax = Math.max(1, ...safeVals);
-  const tickTop = Math.ceil(yMax);
-  const yTickValues = Array.from({ length: Y_TICKS }, (_, i) =>
-    Math.round((tickTop * (Y_TICKS - 1 - i)) / (Y_TICKS - 1))
-  );
 
   return (
     <View style={styles.chartCell}>
       <Text style={styles.chartTitle}>{title}</Text>
-      <View style={styles.chartRow}>
-        <View style={styles.yAxisColumn}>
-          <Text style={styles.yAxisLabel}>{yLabel}</Text>
-          <View style={[styles.yAxisTicks, { height: CHART_HEIGHT }]}>
-            {yTickValues.map((tick, i) => (
-              <Text key={i} style={styles.yAxisTick}>
-                {tick}
-              </Text>
-            ))}
-          </View>
-        </View>
-        <View style={styles.chartArea}>
+      <View style={styles.chartArea}>
           <View style={[styles.barsRow, { height: CHART_HEIGHT }]}>
             {safeVals.map((v, i) => {
               const barH = Math.max(4, (v / yMax) * CHART_HEIGHT);
@@ -248,8 +241,11 @@ function ChartWithLabels({
                 v >= 100 ? Math.round(v) : Math.round(v * 10) / 10;
               return (
                 <View key={i} style={styles.barColumn}>
-                  <Text style={[styles.barValue, { bottom: barH + 6 }]}>
-                    {show}
+                  <Text
+                    style={[styles.barValue, { bottom: barH + 6 }]}
+                    numberOfLines={2}
+                  >
+                    {show} ({yLabel})
                   </Text>
                   <View
                     style={[
@@ -271,7 +267,6 @@ function ChartWithLabels({
               </Text>
             ))}
           </View>
-        </View>
       </View>
     </View>
   );
@@ -291,14 +286,29 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     marginBottom: 12,
   },
+  headerSpacer: {
+    flex: 1,
+  },
+  headerRight: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+  },
   logoutButton: {
-    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: "#3A5A40",
+    backgroundColor: "#A67B5B",
+  },
+  logoutIcon: {
+    width: 28,
+    height: 28,
+    marginRight: 8,
   },
   logoutText: {
     fontSize: 15,
@@ -306,6 +316,7 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
   brand: {
+    flexShrink: 0,
     fontSize: 26,
     fontWeight: "700",
     color: "#3A5A40",
@@ -401,30 +412,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
-  chartRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-  },
-  yAxisColumn: {
-    width: 52,
-    marginRight: 10,
-  },
-  yAxisLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.95)",
-    marginBottom: 6,
-  },
-  yAxisTicks: {
-    justifyContent: "space-between",
-  },
-  yAxisTick: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#ffffff",
-  },
   chartArea: {
     flex: 1,
+    width: "100%",
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 8,
     paddingHorizontal: 8,
@@ -444,10 +434,12 @@ const styles = StyleSheet.create({
   },
   barValue: {
     position: "absolute",
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
     color: "#ffffff",
     textAlign: "center",
+    paddingHorizontal: 1,
+    maxWidth: "100%",
   },
   bar: {
     width: 18,
